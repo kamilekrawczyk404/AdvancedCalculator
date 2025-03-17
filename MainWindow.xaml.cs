@@ -58,9 +58,11 @@ namespace _13032025
         private void UpdateSingleParameterUI(string input, string function, bool after = false)
         {
             string withBrackets = "(" + input + ")";
-            string formatted = after ? (" " + withBrackets + function) : (" " + function + withBrackets);
+            string additionalSpace = this.SecondaryInput.Length > 0 ? " " : "";
 
-            this.SecondaryInput = this.NextClearMain ? formatted : this.SecondaryInput + formatted;
+            string formatted = after ? (additionalSpace + withBrackets + function) : (additionalSpace + function + withBrackets);
+
+            this.SecondaryInput = this.NextClearAll ? formatted : this.SecondaryInput + formatted;
 
             // Update UI
             currentBlock.Text = this.MainInput;
@@ -116,6 +118,7 @@ namespace _13032025
 
         public void Calculate(object sender, RoutedEventArgs e)
         {
+            // Prevent other actions when error occurs
             if (this.MainInput.Length == 0 || this.IsError())
             {
                 return;
@@ -126,6 +129,7 @@ namespace _13032025
             {
                 string op = btn.Content.ToString();
 
+                // If user click the "=" button, ensure that there is something to calculate
                 if (op == "=" && (this.SecondaryInput.Length == 0 || (this.MainInput.Length >= 0 && this.SecondaryInput.EndsWith("="))))
                 {
                     return;
@@ -134,26 +138,30 @@ namespace _13032025
                 // Prevent from calculating output when it's already calculated and when user has not provided the second value yet
                 if (op != "%")
                 {
-
+                    // None of the operators has been clicked
+                    // Append to the secondary input formatted values
                     if (this.SingleOperatorsPrefixes.Any(o => o == op) || this.SingleOperatorsSuffixes.Any(o => o == op))
                     {
                         this.HandleOtherOperators(this.MainInput, op);
                     }
+                    // 
                     else if (this.Operators.Any(o => this.SecondaryInput.EndsWith(o)))
                     {
                         this.SecondaryInput += (" " + this.MainInput + " =");
                         this.SolveUsingPolishNotation(this.SecondaryInput);
                         this.NextClearAll = true;
-
                     }
-                    else if (this.SecondaryInput.Length > 0 && this.MainInput.Length > 0 && this.SecondaryInput.EndsWith("="))
+                    //else if (this.SecondaryInput.Length > 0 && this.MainInput.Length > 0 && this.SecondaryInput.EndsWith("="))
+                    //{
+                    //    this.SecondaryInput = "";
+                    //    this.HandleOtherOperators(this.MainInput, op);
+                    //    this.SolveUsingPolishNotation(this.SecondaryInput);
+                    //}
+                    // Calculate secondary input
+                    else
                     {
-                        this.SecondaryInput = "";
-                        this.HandleOtherOperators(this.MainInput, op);
-                        this.SolveUsingPolishNotation(this.SecondaryInput);
-                    }
-                    else  {
                         this.SecondaryInput += " =";
+                        Trace.WriteLine(this.SecondaryInput);
                         this.SolveUsingPolishNotation(this.SecondaryInput);
                         this.NextClearAll = true;
                     }
@@ -166,6 +174,7 @@ namespace _13032025
                     this.prevBlock.Text = this.SecondaryInput;
                     this.currentBlock.Text = this.MainInput;
                 }
+                // Percentage logic
                 else
                 {
                     string value = this.MainInput + "%";
@@ -181,6 +190,7 @@ namespace _13032025
 
         public void AppendOperator(object sender, RoutedEventArgs e)
         {
+            // When error occurs, prevent other actions
             if (this.IsError())
             {
                 return;
@@ -189,6 +199,8 @@ namespace _13032025
             if (sender is Button btn)
             {
                 string op = btn.Content.ToString() ?? "";
+                // Power operator is represented with two characters
+                // In the polish notation logic we need to convert in into "^"
                 op = op == "xʸ" ? "^" : op;
 
                 this.Operation = op;
@@ -201,25 +213,29 @@ namespace _13032025
                     return;
                 }
 
+                // Something can be calculated
                 if (this.SecondaryInput.EndsWith("="))
                 {
                     this.SecondaryInput = this.MainInput + " " + op;
                 }
-                else if (this.Operators.Any(o => this.SecondaryInput.EndsWith(o)))
+                // User want to change current operator
+                else if (this.Operators.Any(o => this.SecondaryInput.EndsWith(o)) && !this.AppendingOperators)
                 {
-                    if (this.AppendingOperators)
-                    {
-                        this.AppendingOperators = false;
-                        this.SecondaryInput += (" " + this.MainInput + " " + op);
-                    }
+                    this.SecondaryInput = this.SecondaryInput.Substring(0, this.SecondaryInput.Length - 2) + " " + op;
                 }
+                // Secondary input contains values, but it doesn't have any opeartion, append only it
+                else if (this.SecondaryInput.Length > 0 && !this.Operators.Any(o => this.SecondaryInput.EndsWith(o)))
+                {
+                    this.SecondaryInput += (" " + op);
+                }
+                // Append multiple tokens
                 else
                 {
                     this.AppendingOperators = false;
-                    this.SecondaryInput += this.SecondaryInput.Length == 0 ? (this.MainInput + " " + op) : " " + op;
-
+                    this.SecondaryInput += (" " + this.MainInput + " " + op);
                 }
 
+                // Update UI
                 currentBlock.Text = MainInput;
                 prevBlock.Text = SecondaryInput;
             }
@@ -227,6 +243,7 @@ namespace _13032025
 
         public void AppendValue(object sender, RoutedEventArgs e)
         {
+            // Prevent appending values when error occurs
             if (this.IsError())
             {
                 return;
@@ -236,8 +253,7 @@ namespace _13032025
             {
                 string value = btn.Content.ToString() ?? "";
 
-               
-
+                // User calculated some value, appending next value will clear the UI
                 if (this.NextClearAll)
                 {
                     this.NextClearAll = false;
@@ -246,7 +262,6 @@ namespace _13032025
 
                 ClearButton.Content = "CE";
                 this.AppendingOperators = true;
-
 
                 // Prevent adding another "0" if already "0"
                 if (value == "0" && this.MainInput == "0")
@@ -279,7 +294,6 @@ namespace _13032025
                     {
                         this.prevBlock.Text = this.SecondaryInput = "";
                         this.Operation = "";
-                        //this.NextClearAll = true;
                     }
 
                     NextClearMain = false;
@@ -297,7 +311,6 @@ namespace _13032025
             }
         }
 
-
         public void EraseValue(object sender, RoutedEventArgs e)
         {
             int length = this.MainInput.Length;
@@ -311,25 +324,24 @@ namespace _13032025
                 return;
             }
 
-
+            // Prevent letting only minus sign
             if ((this.MainInput.StartsWith("-") && length == 2) || this.IsError())
             {
-                // Prevent letting only minus sign
                 this.MainInput = "0";
-            } 
+            }
+            // Erase string by one character from the end
             else
             {
-                // Erase string by one character from the end
                 this.MainInput = length > 1 ? this.MainInput.Substring(0, length - 1) : "0";
             }
                 
-
             // Update UI
             currentBlock.Text = this.MainInput;
         }
 
         public void ChangeSign(object sender, RoutedEventArgs e)
         {
+            // Prevent changing sign when inputs are empty, there is zero or error occurs
             if (this.MainInput == "0" || this.MainInput == "0." || this.MainInput.Length == 0 || this.IsError())
             {
                 return;
@@ -337,30 +349,28 @@ namespace _13032025
 
             string number;
 
-            // Is negative
+            // Current number is negative, make it positive
             if (this.MainInput.StartsWith("-"))
             {
                 number = this.MainInput.Substring(1, this.MainInput.Length - 1);
             }
+            // From positive to negative
             else
             {
                 number = "-" + this.MainInput;
             }
 
+            // Update UI
             this.currentBlock.Text = this.MainInput = number;
         }
-
-       
 
         public void Clear(object sender, RoutedEventArgs e)
         {
             if (ClearButton.Content.ToString() == "CE")
             {
-                // cancel entry
                 this.CancelAnEntry();
             } else
             {
-                // clear all inputs (C)
                 this.ClearAll();
             }
         }       
