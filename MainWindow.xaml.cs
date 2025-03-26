@@ -342,7 +342,7 @@ namespace _13032025
         public void ChangeSign(object sender, RoutedEventArgs e)
         {
             // Prevent changing sign when inputs are empty, there is zero or error occurs
-            if (this.MainInput == "0" || this.MainInput == "0." || this.MainInput.Length == 0 || this.IsError())
+            if (this.MainInput == "0" || this.MainInput == "0," || this.MainInput.Length == 0 || this.IsError())
             {
                 return;
             }
