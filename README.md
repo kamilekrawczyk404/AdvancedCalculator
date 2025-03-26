@@ -1,6 +1,8 @@
 # C# WPF Calculator
 
+## 🖼 Application Preview
 
+<img src="./Resources/Images/ReadmeImage.png" alt="drawing" width="700"/>
 
 ## 📌 Overview
 
